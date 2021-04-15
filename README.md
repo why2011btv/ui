@@ -1,3 +1,4 @@
+Install required package
 ```
 git clone https://github.com/AnthonySigogne/web-search-engine-ui.git
 cd web-search-engine-ui
