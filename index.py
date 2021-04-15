@@ -43,11 +43,14 @@ def search():
     hits = request.args.get("hits", 10, type=int)
     if start < 0 or hits < 0 :
         return "Error, start or hits cannot be negative numbers"
-    myresult = {
-                                "title": "Haoyu's Homepage",
+    results = []
+    for i in range(40):
+        results.append({
+                                "title": "Haoyu's Homepage " + str(i),
                                 "description": "A description here",
                                 "url": "https://why2011btv.github.io"
-                                } 
+                                })
+    
     if query :
 
         """
@@ -65,21 +68,32 @@ def search():
         data = r.json()
         """
         data = {
-                "total": 20,
-                "results": [
-                              myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,
-                              myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,
-                              myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,
-                              myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult,myresult
-                            ]
+                "total": 40,
+                "results": results
                 }
         i = int(start/hits)
-        maxi = 1+int(data["total"]/hits)
-        range_pages = range(i-5,i+5 if i+5 < maxi else maxi) if i >= 6 else range(0,maxi if maxi < 10 else 10)
+        if int(data["total"]/hits) * hits == data["total"]:
+            maxi = int(data["total"]/hits)
+        else:
+            maxi = 1 + int(data["total"]/hits)
+        if i >= 6:
+            left_range = i-5
+            if i+5 < maxi:
+                right_range = i+5
+            else:
+                right_range = maxi
+        else:
+            left_range = 0
+            if maxi < 10:
+                right_range = maxi
+            else:
+                right_range = 10
+        range_pages = range(left_range, right_range)
         print("start")
         print(start)
         print("hits")
         print(hits)
+        
         # show the list of matching results
         return render_template('spatial/index.html', query=query,
             #response_time=r.elapsed.total_seconds(),
