@@ -13,9 +13,8 @@
 		margin: 0;
 		padding: 0;
 		border: 0;
-		font-size: 100%;
 		font: inherit;
-		vertical-align: baseline;
+		
 	}
 
 	article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section {
@@ -23,7 +22,7 @@
 	}
 
 	body {
-		line-height: 1;
+		line-height: 0.8;
 	}
 
 	ol, ul {
@@ -1714,8 +1713,8 @@
 		}
 
 	h2 {
-		font-size: 1.75em;
-		line-height: 1.5em;
+		font-size: 1.5em;
+		line-height: 1em;
 	}
 
 	h3 {
