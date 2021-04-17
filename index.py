@@ -19,6 +19,7 @@ import os
 import requests
 from urllib import parse
 from flask import Flask, request, jsonify, render_template
+from edl import *
 
 # init flask app and env variables
 app = Flask(__name__)
@@ -104,7 +105,9 @@ def search():
             range_pages=range_pages,
             results=data["results"][start:start+hits],
             page=i,
-            maxpage=maxi-1)
+            maxpage=maxi-1,
+            edl=edl(query)
+            )
         
     # return homepage (no query)
     return render_template('spatial/index.html')

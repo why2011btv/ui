@@ -36,6 +36,7 @@
 			<div class="image rounded" style="float:left;margin-left:30px;top:-11px;margin-right:20px">
 				<a href="/"><img src="static/spatial/images/Neckertal.jpg" alt="" style="width:100px;height:100px"/></a>
 			</div>
+
 			<div class="container">
 				<form action="/" method="GET" name="search" role="search">
 					<header class="major special">
@@ -44,6 +45,13 @@
 						<p>About {{total}} results ({{response_time}} seconds)</p>
 					</header>
 				</form>
+				<div class="feature">
+					<div class="content">
+						<header>
+							<h3><span style="background-color:rgb(208, 234, 255);">Named Entity Linking Results (DBpedia): {{edl}}<br></span></h3>
+						</header>
+					</div>
+				</div>
 					{%for result in results%}
 					<div class="feature">
 						<div class="content">
