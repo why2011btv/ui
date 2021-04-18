@@ -3,6 +3,13 @@ from IPython.core.display import display, HTML# An API Error Exception
 
 from bs4 import BeautifulSoup
 
+entities = []
+with open("20180730.txt") as file:
+    lines = file.readlines()
+    for line in lines:
+        ent = line.split(" ")[0][1:-1]
+        if ent != "14541":
+            entities.append(ent)
 
 class APIError(Exception):
     def __init__(self, status):
@@ -21,5 +28,21 @@ def edl(query):
     if res.status_code != 200:
         # Something went wrong
         raise APIError(res.status_code)# Display the result as HTML in Jupyter Notebook
-    
-    return HTML(res.text)
+
+    text = res.text
+    position = text.find("<a href=")
+    my_list = []
+    while position != -1:
+        text = text[position+9:]
+        quoteEnd = text.find('\"')
+        if quoteEnd != -1:
+            my_list.append(text[0:quoteEnd].split("/")[-1])
+            text = text[quoteEnd:]
+            position = text.find("<a href=")
+    print(my_list)
+
+    result_list = []
+    for entity in my_list:
+        if entity in entities:
+            result_list.append(entity)
+    return HTML(res.text), result_list

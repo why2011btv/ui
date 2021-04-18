@@ -50,6 +50,10 @@
 						<header>
 							<h3><span style="background-color:rgb(208, 234, 255);">Named Entity Linking Results (DBpedia): {{edl}}<br></span></h3>
 						</header>
+							{%for entity in entityList%}
+							<p><a href="http://localhost:6006/#projector" target="_blank" title="http://localhost:6006/">Visualization of entity embedding!<br></a>(learned from FB15K237, put "{{entity}}" in the search box on the right side of the graph)</p>
+							{%endfor%}
+						
 					</div>
 				</div>
 					{%for result in results%}

@@ -1,20 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-UI - a simple web search engine.
-The goal is to index an infinite list of URLs (web pages),
-and then be able to quickly search relevant URLs against a query.
-
-See https://github.com/AnthonySigogne/web-search-engine for more information.
-"""
-
-__author__ = "Anthony Sigogne"
-__copyright__ = "Copyright 2017, Byprog"
-__email__ = "anthony@byprog.com"
-__license__ = "MIT"
-__version__ = "1.0"
-
 import os
 import requests
 from urllib import parse
@@ -94,7 +77,8 @@ def search():
         print(start)
         print("hits")
         print(hits)
-        
+        edl_result, entityList = edl(query)
+        print(entityList)
         # show the list of matching results
         return render_template('spatial/index.html', query=query,
             #response_time=r.elapsed.total_seconds(),
@@ -106,7 +90,8 @@ def search():
             results=data["results"][start:start+hits],
             page=i,
             maxpage=maxi-1,
-            edl=edl(query)
+            edl=edl_result,
+            entityList=entityList,
             )
         
     # return homepage (no query)
