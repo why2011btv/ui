@@ -47,13 +47,30 @@
 				</form>
 				<div class="feature">
 					<div class="content">
+						{%if edl_found_n%}
 						<header>
-							<h3><span style="background-color:rgb(208, 234, 255);">Named Entity Linking Results (DBpedia): {{edl}}<br></span></h3>
+							<h3><span style="background-color:rgb(208, 234, 255);">Mention Linking: {{edl_found_n}} link(s) in Wikipedia <a href="http://jodaiber.de/doc/entity.pdf" target="_blank"></a>: {{edl}}<br></span></h3>
 						</header>
-							{%for entity in entityList%}
-							<p><a href="http://localhost:6006/#projector" target="_blank" title="http://localhost:6006/">Visualization of entity embedding!<br></a>(learned from FB15K237, put "{{entity}}" in the search box on the right side of the graph)</p>
-							{%endfor%}
-						
+						{%if dolores_n%}
+						<header>
+							<h3><span style="background-color:rgb(208, 234, 255);">You may also be interested in<a href="http://jodaiber.de/doc/entity.pdf" target="_blank"></a>:<br></span>
+								{%for ent in entityList%}
+								{%for neighbor in ent.top5%}
+									<b><a href="https://en.wikipedia.org/wiki/{{neighbor}}" target="_blank">{{neighbor.replace('_', ' ')}}</a></b>, 
+								{%endfor%}							
+								{%endfor%}
+								...
+							</h3>
+						</header>
+						<br>
+						<header>
+							<h3><span style="background-color:rgb(208, 234, 255);">Visualization of entity's Dolores embedding:<br></span></h3>
+						</header>
+						{%for ent in entityList%}
+						<p><b>>> Put "{{ent.entity}}" in the search box on the right side of the <a href="http://localhost:6006/#projector" target="_blank">graph</a>, and miracle happens ^_^</b></p>
+						{%endfor%}
+						{%endif%}
+						{%endif%}
 					</div>
 				</div>
 					{%for result in results%}

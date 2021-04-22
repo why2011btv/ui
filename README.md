@@ -10,6 +10,8 @@ tensorboard --logdir=runs/testing_tensorboard_pt
 ```
 
 Visit:
+Tested performance on Firefox
 ```
 localhost:45555
+localhost:6006
 ```

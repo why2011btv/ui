@@ -3,11 +3,68 @@ import requests
 from urllib import parse
 from flask import Flask, request, jsonify, render_template
 from edl import *
+import pymongo
 
 # init flask app and env variables
 app = Flask(__name__)
 host = os.getenv("HOST")
 port = os.getenv("PORT")
+
+myclient = pymongo.MongoClient("mongodb+srv://chris:555Project2021@cluster0.kphap.mongodb.net/SearchEngine?retryWrites=true&w=majority")
+mydb = myclient["SearchEngine"]
+mycol = mydb["indexes"]
+
+mydoc = mycol.find().sort("lemma")
+lexicon = {}
+URL_WTD = {}
+
+for x in mydoc:
+    lexicon[x['lemma']] = {'IDF': x['IDF'], 'docList': x['docList']}
+    for doc in x['docList']:
+        if doc['docURL'] in URL_WTD.keys():
+            URL_WTD[doc['docURL']][x['lemma']] = doc['WTD']
+        else:
+            URL_WTD[doc['docURL']] = {x['lemma']: doc['WTD']}
+
+def find_relevant_doc(query):
+    doc_list = []
+    for token in query.keys():
+        for doc in lexicon[token]['docList']:
+            doc_list.append(doc['docURL'])
+    return doc_list
+
+def compute_score(docURL, query):
+    score = 0.0
+    for token in query.keys():
+        if token in URL_WTD[docURL].keys():
+            score += lexicon[token]['IDF'] * query[token] * URL_WTD[docURL][token]
+    return score
+
+def sort(doc_list, query):
+    unsorted_dict = {}
+    for docURL in doc_list:
+        unsorted_dict[docURL] = compute_score(docURL, query)
+    sorted_dict = {k: v for k, v in sorted(unsorted_dict.items(), key=lambda item: item[1], reverse = True)}
+    results = []
+    for url in sorted_dict:
+        results.append({"title": "A title here",
+        "description": "A description here",
+        "url": url
+        })
+    return results
+
+def query2dict(query):
+    query_dict = {}
+    tokens = query.split(" ")
+    for token in tokens:
+        if token not in lexicon.keys():
+            return {'!': 1}
+        else:
+            if token not in query_dict.keys():
+                query_dict[token] = 1
+            else:
+                query_dict[token] += 1
+    return query_dict
 
 @app.route("/", methods=['GET'])
 def search():
@@ -27,30 +84,11 @@ def search():
     hits = request.args.get("hits", 10, type=int)
     if start < 0 or hits < 0 :
         return "Error, start or hits cannot be negative numbers"
-    results = []
-    for i in range(40):
-        results.append({
-                                "title": "Haoyu's Homepage " + str(i),
-                                "description": "A description here",
-                                "url": "https://why2011btv.github.io"
-                                })
     
     if query :
+        query_dict = query2dict(query)
+        results = sort(find_relevant_doc(query_dict), query_dict)
 
-        """
-        # query search engine
-        try :
-            r = requests.post('http://%s:%s/search'%(host, port), data = {
-                'query':query,
-                'hits':hits,
-                'start':start
-            })
-        except :
-            return "Error, check your installation"
-
-        # get data and compute range of results pages
-        data = r.json()
-        """
         data = {
                 "total": 40,
                 "results": results
@@ -77,7 +115,7 @@ def search():
         print(start)
         print("hits")
         print(hits)
-        edl_result, entityList = edl(query)
+        edl_result, entityList, edl_found_n, dolores_n = edl(query)
         print(entityList)
         # show the list of matching results
         return render_template('spatial/index.html', query=query,
@@ -92,6 +130,8 @@ def search():
             maxpage=maxi-1,
             edl=edl_result,
             entityList=entityList,
+            edl_found_n = edl_found_n,
+            dolores_n=dolores_n
             )
         
     # return homepage (no query)
