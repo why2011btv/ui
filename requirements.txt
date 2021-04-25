@@ -2,3 +2,5 @@ Flask
 requests
 tensorboard
 bs4
+torch
+pymongo
