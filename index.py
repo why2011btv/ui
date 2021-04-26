@@ -4,7 +4,10 @@ from urllib import parse
 from flask import Flask, request, jsonify, render_template
 from edl import *
 import pymongo
-
+import bs4
+import urllib.request
+import time
+import re
 # init flask app and env variables
 app = Flask(__name__)
 host = os.getenv("HOST")
@@ -26,6 +29,10 @@ for x in mydoc:
         else:
             URL_WTD[doc['docURL']] = {x['lemma']: doc['WTD']}
 
+def pagerank_getter(url):
+    documents = mydb['documents']
+    return documents.find({'url': url})[0]['pagerank']
+
 def find_relevant_doc(query):
     doc_list = []
     for token in query.keys():
@@ -34,21 +41,51 @@ def find_relevant_doc(query):
     return doc_list
 
 def compute_score(docURL, query):
-    score = 0.0
+    cosine_score = 0.0
     for token in query.keys():
         if token in URL_WTD[docURL].keys():
-            score += lexicon[token]['IDF'] * query[token] * URL_WTD[docURL][token]
-    return score
+            cosine_score += lexicon[token]['IDF'] * query[token] * URL_WTD[docURL][token]
+    pagerank = pagerank_getter(docURL)
+    # Harmonic Mean
+    Total_Score = 2*(cosine_score * pagerank) / (cosine_score + pagerank)
+    print("cosine_score", cosine_score)
+    print("pagerank", pagerank)
+    return Total_Score
 
-def sort(doc_list, query):
+def desciption_getter(url, token_list):
+    html = urllib.request.urlopen(url).read()
+    soup = bs4.BeautifulSoup(html)
+    for script in soup(["script", "style"]):
+        script.decompose()
+    strips = list(soup.stripped_strings)
+    mystr = ' '.join(strips)
+    return_str = ''
+    for token in token_list:
+        try:
+            loc = re.search(token, mystr, re.IGNORECASE).start()
+            if loc != -1:
+                return_str += mystr[loc-70:loc+70] + '...'
+        except:
+            print("An exception occurred") 
+        
+    return return_str
+
+def title_getter(url):
+    html = urllib.request.urlopen(url).read()
+    soup = bs4.BeautifulSoup(html)
+    return soup.title.string
+
+def sort(doc_list, query, token_list):
     unsorted_dict = {}
     for docURL in doc_list:
         unsorted_dict[docURL] = compute_score(docURL, query)
     sorted_dict = {k: v for k, v in sorted(unsorted_dict.items(), key=lambda item: item[1], reverse = True)}
     results = []
+
     for url in sorted_dict:
-        results.append({"title": "A title here",
-        "description": "A description here",
+        print(url)
+        results.append({"title": title_getter(url),
+        "description": desciption_getter(url, token_list),
         "url": url
         })
     return results
@@ -56,15 +93,16 @@ def sort(doc_list, query):
 def query2dict(query):
     query_dict = {}
     tokens = query.split(" ")
+    token_list = []
     for token in tokens:
-        if token not in lexicon.keys():
-            return {'!': 1}
-        else:
+        token = token.lower()
+        if token in lexicon.keys():
+            token_list.append(token)
             if token not in query_dict.keys():
                 query_dict[token] = 1
             else:
                 query_dict[token] += 1
-    return query_dict
+    return query_dict, token_list
 
 @app.route("/", methods=['GET'])
 def search():
@@ -78,6 +116,10 @@ def search():
         - start : the start of hits
     Return a template view with the list of relevant URLs.
     """
+
+
+    
+
     # GET data
     query = request.args.get("query", None)
     start = request.args.get("start", 0, type=int)
@@ -85,14 +127,27 @@ def search():
     if start < 0 or hits < 0 :
         return "Error, start or hits cannot be negative numbers"
     
-    if query :
-        query_dict = query2dict(query)
-        results = sort(find_relevant_doc(query_dict), query_dict)
+    if query:
+        start_time = time.time()
 
-        data = {
-                "total": 40,
-                "results": results
-                }
+        edl_result, entityList, edl_found_n, dolores_n = edl(query)
+        print(entityList)
+
+        query_dict, token_list = query2dict(query)
+        print(query_dict)
+        print(token_list)
+        if bool(query_dict):
+            results = sort(find_relevant_doc(query_dict), query_dict, token_list)
+            data = {
+                    "total": len(results),
+                    "results": results
+            }
+        else:
+            data = {
+                    "total": 0,
+                    "results": []
+            }
+
         i = int(start/hits)
         if int(data["total"]/hits) * hits == data["total"]:
             maxi = int(data["total"]/hits)
@@ -115,12 +170,14 @@ def search():
         print(start)
         print("hits")
         print(hits)
-        edl_result, entityList, edl_found_n, dolores_n = edl(query)
-        print(entityList)
+        
+
+        end_time = time.time()
+        
         # show the list of matching results
         return render_template('spatial/index.html', query=query,
             #response_time=r.elapsed.total_seconds(),
-            response_time=0.01,
+            response_time=format(end_time-start_time, '.4f'),
             total=data["total"],
             hits=hits,
             start=start,
