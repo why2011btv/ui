@@ -16,21 +16,35 @@ port = os.getenv("PORT")
 myclient = pymongo.MongoClient("mongodb+srv://chris:555Project2021@cluster0.kphap.mongodb.net/SearchEngine?retryWrites=true&w=majority")
 mydb = myclient["SearchEngine"]
 mycol = mydb["indexes"]
-
-mydoc = mycol.find().sort("lemma")
+documents = mydb['documents']
+mydoc = mycol.find({'lemma' : { "$not": {"$regex" : ".* .*"} }})
 lexicon = {}
 URL_WTD = {}
+num = 0
 
+start_time = time.time()
 for x in mydoc:
-    lexicon[x['lemma']] = {'IDF': x['IDF'], 'docList': x['docList']}
-    for doc in x['docList']:
-        if doc['docURL'] in URL_WTD.keys():
-            URL_WTD[doc['docURL']][x['lemma']] = doc['WTD']
-        else:
-            URL_WTD[doc['docURL']] = {x['lemma']: doc['WTD']}
+    num += 1
+    if num < 20000:
+        lexicon[x['lemma']] = {'IDF': x['IDF'], 'docList': x['docList']}
+        for doc in x['docList']:
+            if doc['docURL'] in URL_WTD.keys():
+                URL_WTD[doc['docURL']][x['lemma']] = doc['WTD']
+            else:
+                URL_WTD[doc['docURL']] = {x['lemma']: doc['WTD']}
+    else:
+        break
+
+end_time = time.time()    
+print(end_time - start_time)
+
+stop_words = []
+with open('stop_words_en.txt') as f:
+    lines = f.readlines()
+    for line in lines:
+        stop_words.append(line[0:-1])
 
 def pagerank_getter(url):
-    documents = mydb['documents']
     return documents.find({'url': url})[0]['pagerank']
 
 def find_relevant_doc(query):
@@ -45,50 +59,71 @@ def compute_score(docURL, query):
     for token in query.keys():
         if token in URL_WTD[docURL].keys():
             cosine_score += lexicon[token]['IDF'] * query[token] * URL_WTD[docURL][token]
-    pagerank = pagerank_getter(docURL)
+    #pagerank = pagerank_getter(docURL)
+    pagerank = 0.001
     # Harmonic Mean
     Total_Score = 2*(cosine_score * pagerank) / (cosine_score + pagerank)
     print("cosine_score", cosine_score)
     print("pagerank", pagerank)
     return Total_Score
 
-def desciption_getter(url, token_list):
-    html = urllib.request.urlopen(url).read()
-    soup = bs4.BeautifulSoup(html)
-    for script in soup(["script", "style"]):
-        script.decompose()
-    strips = list(soup.stripped_strings)
-    mystr = ' '.join(strips)
-    return_str = ''
-    for token in token_list:
-        try:
-            loc = re.search(token, mystr, re.IGNORECASE).start()
-            if loc != -1:
-                return_str += mystr[loc-70:loc+70] + '...'
-        except:
-            print("An exception occurred") 
-        
-    return return_str
+def desciption_getter(url):
+    return documents.find({'url': url})[0]['snippet']
+
+def desciption_getter_adhoc(url, token_list):
+    try:
+        html = urllib.request.urlopen(url).read()
+        soup = bs4.BeautifulSoup(html)
+        for script in soup(["script", "style"]):
+            script.decompose()
+        strips = list(soup.stripped_strings)
+        mystr = ' '.join(strips)
+        return_str = ''
+        for token in token_list:
+            try:
+                loc = re.search(token, mystr, re.IGNORECASE).start()
+                if loc != -1:
+                    return_str += mystr[loc-70:loc+70] + '...'
+            except:
+                print("An exception occurred") 
+            
+        return return_str
+    except:
+        return ''
 
 def title_getter(url):
-    html = urllib.request.urlopen(url).read()
-    soup = bs4.BeautifulSoup(html)
-    return soup.title.string
+    return documents.find({'url': url})[0]['title']
+
+def title_getter_adhoc(url):
+    try:
+        html = urllib.request.urlopen(url).read()
+        soup = bs4.BeautifulSoup(html)
+        return soup.title.string
+    except:
+        return ''
+
+def info_getter(url_list):
+    results = {}
+    for x in documents.find({'url': {'$in': url_list}}):
+        results[x['url']] = {"title": x['title'], "description": x['snippet']}
+    return results
 
 def sort(doc_list, query, token_list):
+    results = info_getter(doc_list)
     unsorted_dict = {}
-    for docURL in doc_list:
-        unsorted_dict[docURL] = compute_score(docURL, query)
-    sorted_dict = {k: v for k, v in sorted(unsorted_dict.items(), key=lambda item: item[1], reverse = True)}
-    results = []
+    for i in results.keys():
+        unsorted_dict[i] = compute_score(i, query)
 
+    sorted_dict = {k: v for k, v in sorted(unsorted_dict.items(), key=lambda item: item[1], reverse = True)}
+    sorted_results = []
+    
     for url in sorted_dict:
         print(url)
-        results.append({"title": title_getter(url),
-        "description": desciption_getter(url, token_list),
+        sorted_results.append({"title": results[url]['title'],
+        "description": results[url]['description'],
         "url": url
         })
-    return results
+    return sorted_results
 
 def query2dict(query):
     query_dict = {}
@@ -96,7 +131,7 @@ def query2dict(query):
     token_list = []
     for token in tokens:
         token = token.lower()
-        if token in lexicon.keys():
+        if token in lexicon.keys() and token not in stop_words:
             token_list.append(token)
             if token not in query_dict.keys():
                 query_dict[token] = 1
@@ -116,9 +151,6 @@ def search():
         - start : the start of hits
     Return a template view with the list of relevant URLs.
     """
-
-
-    
 
     # GET data
     query = request.args.get("query", None)
@@ -170,7 +202,6 @@ def search():
         print(start)
         print("hits")
         print(hits)
-        
 
         end_time = time.time()
         
