@@ -8,6 +8,7 @@ import bs4
 import urllib.request
 import time
 import re
+import json
 # init flask app and env variables
 app = Flask(__name__)
 host = os.getenv("HOST")
@@ -20,24 +21,31 @@ documents = mydb['documentsFull']
 mydoc = mycol.find({'lemma' : { "$not": {"$regex" : ".* .*"} }})
 lexicon = {}
 URL_WTD = {}
+with ("lexicon.json") as f_l:
+    lexicon = json.load(f_l)
+with ("URL_WTD.json") as f_W:
+    URL_WTD = json.load(f_W)
+"""
 num = 0
 
 start_time = time.time()
 for x in mydoc:
     num += 1
-    if num < 20000:
-        lexicon[x['lemma']] = {'IDF': x['IDF'], 'docList': x['docList']}
-        for doc in x['docList']:
-            if doc['docURL'] in URL_WTD.keys():
-                URL_WTD[doc['docURL']][x['lemma']] = doc['WTD']
-            else:
-                URL_WTD[doc['docURL']] = {x['lemma']: doc['WTD']}
-    else:
+    lexicon[x['lemma']] = {'IDF': x['IDF'], 'docList': x['docList']}
+    for doc in x['docList']:
+        if doc['docURL'] in URL_WTD.keys():
+            URL_WTD[doc['docURL']][x['lemma']] = doc['WTD']
+        else:
+            URL_WTD[doc['docURL']] = {x['lemma']: doc['WTD']}
+    if num % 1000 == 0:
+        print(num)
+        print(x['lemma'])
+    if num == 50000:
         break
 
 end_time = time.time()    
 print(end_time - start_time)
-
+"""
 stop_words = []
 with open('stop_words_en.txt') as f:
     lines = f.readlines()
