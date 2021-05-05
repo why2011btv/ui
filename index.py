@@ -15,8 +15,8 @@ port = os.getenv("PORT")
 
 myclient = pymongo.MongoClient("mongodb+srv://chris:555Project2021@cluster0.kphap.mongodb.net/SearchEngine?retryWrites=true&w=majority")
 mydb = myclient["SearchEngine"]
-mycol = mydb["indexes"]
-documents = mydb['documents']
+mycol = mydb["indexes_final"]
+documents = mydb['documentsFull']
 mydoc = mycol.find({'lemma' : { "$not": {"$regex" : ".* .*"} }})
 lexicon = {}
 URL_WTD = {}
@@ -163,11 +163,11 @@ def search():
         start_time = time.time()
 
         edl_result, entityList, edl_found_n, dolores_n = edl(query)
-        print(entityList)
+        #print(entityList)
 
         query_dict, token_list = query2dict(query)
-        print(query_dict)
-        print(token_list)
+        #print(query_dict)
+        #print(token_list)
         if bool(query_dict):
             results = sort(find_relevant_doc(query_dict), query_dict, token_list)
             data = {
