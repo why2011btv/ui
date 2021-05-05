@@ -8,6 +8,7 @@ import bs4
 import urllib.request
 import time
 import re
+import random
 import json
 # init flask app and env variables
 app = Flask(__name__)
@@ -25,6 +26,9 @@ with open("lexicon.json") as f_l:
     lexicon = json.load(f_l)
 with open("URL_WTD.json") as f_W:
     URL_WTD = json.load(f_W)
+
+print("lexicon size: ", len(lexicon))
+print("random key: ", random.choice(list(lexicon)))
 """
 num = 0
 
@@ -74,7 +78,7 @@ def compute_score(docURL, query):
     print("cosine_score", cosine_score)
     print("pagerank", pagerank)
     return Total_Score
-
+"""
 def desciption_getter(url):
     return documents.find({'url': url})[0]['snippet']
 
@@ -109,7 +113,7 @@ def title_getter_adhoc(url):
         return soup.title.string
     except:
         return ''
-
+"""
 def info_getter(url_list):
     results = {}
     for x in documents.find({'url': {'$in': url_list}}):
