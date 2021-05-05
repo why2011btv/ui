@@ -21,9 +21,9 @@ documents = mydb['documentsFull']
 mydoc = mycol.find({'lemma' : { "$not": {"$regex" : ".* .*"} }})
 lexicon = {}
 URL_WTD = {}
-with ("lexicon.json") as f_l:
+with open("lexicon.json") as f_l:
     lexicon = json.load(f_l)
-with ("URL_WTD.json") as f_W:
+with open("URL_WTD.json") as f_W:
     URL_WTD = json.load(f_W)
 """
 num = 0
