@@ -37,9 +37,9 @@ for x in mydoc:
             URL_WTD[doc['docURL']][x['lemma']] = doc['WTD']
         else:
             URL_WTD[doc['docURL']] = {x['lemma']: doc['WTD']}
-    #if num % 1000 == 0:
-    #    print(num)
-    #    print(x['lemma'])
+    if num % 10000 == 0:
+        print(num)
+        print(x['lemma'])
     #if num == 2000:
     #    break
 print(num)
