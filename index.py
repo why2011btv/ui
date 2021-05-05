@@ -22,7 +22,7 @@ documents = mydb['documentsFull']
 mydoc = mycol.find({'lemma' : { "$not": {"$regex" : ".* .*"} }})
 lexicon = {}
 URL_WTD = {}
-"""
+start_time = time.time()
 with open("lexicon.json") as f_l:
     lexicon = json.load(f_l)
 with open("URL_WTD.json") as f_W:
@@ -30,10 +30,12 @@ with open("URL_WTD.json") as f_W:
 
 print("lexicon size: ", len(lexicon))
 print("random key: ", random.choice(list(lexicon)))
+end_time = time.time()    
+print(end_time - start_time)
+
 """
 num = 0
 
-start_time = time.time()
 for x in mydoc:
     num += 1
     lexicon[x['lemma']] = {'IDF': x['IDF'], 'docList': x['docList']}
@@ -48,9 +50,7 @@ for x in mydoc:
     if num == 50000:
         break
 
-end_time = time.time()    
-print(end_time - start_time)
-#"""
+"""
 stop_words = []
 with open('stop_words_en.txt') as f:
     lines = f.readlines()
@@ -60,7 +60,11 @@ with open('stop_words_en.txt') as f:
 def pagerank_getter(url_list):
     results = {}
     for x in documents.find({'url': {'$in': url_list}}):
-        results[x['url']] = {'pagerank': x['pagerank']}
+        try:
+            results[x['url']] = {'pagerank': x['pagerank']}
+        except:
+            results[x['url']] = {'pagerank': 0.0015}
+            print("pagerank not found for: ", x['url'])
     return results
 
 def find_relevant_doc(query):
