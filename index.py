@@ -22,6 +22,7 @@ documents = mydb['documentsFull']
 mydoc = mycol.find({'lemma' : { "$not": {"$regex" : ".* .*"} }})
 lexicon = {}
 URL_WTD = {}
+"""
 with open("lexicon.json") as f_l:
     lexicon = json.load(f_l)
 with open("URL_WTD.json") as f_W:
@@ -49,15 +50,18 @@ for x in mydoc:
 
 end_time = time.time()    
 print(end_time - start_time)
-"""
+#"""
 stop_words = []
 with open('stop_words_en.txt') as f:
     lines = f.readlines()
     for line in lines:
         stop_words.append(line[0:-1])
 
-def pagerank_getter(url):
-    return documents.find({'url': url})[0]['pagerank']
+def pagerank_getter(url_list):
+    results = {}
+    for x in documents.find({'url': {'$in': url_list}}):
+        results[x['url']] = {'pagerank': x['pagerank']}
+    return results
 
 def find_relevant_doc(query):
     doc_list = []
@@ -66,54 +70,17 @@ def find_relevant_doc(query):
             doc_list.append(doc['docURL'])
     return doc_list
 
-def compute_score(docURL, query):
+def compute_score(docURL, query, pagerank):
     cosine_score = 0.0
     for token in query.keys():
         if token in URL_WTD[docURL].keys():
             cosine_score += lexicon[token]['IDF'] * query[token] * URL_WTD[docURL][token]
-    #pagerank = pagerank_getter(docURL)
-    pagerank = 0.001
     # Harmonic Mean
     Total_Score = 2*(cosine_score * pagerank) / (cosine_score + pagerank)
     print("cosine_score", cosine_score)
     print("pagerank", pagerank)
     return Total_Score
-"""
-def desciption_getter(url):
-    return documents.find({'url': url})[0]['snippet']
 
-def desciption_getter_adhoc(url, token_list):
-    try:
-        html = urllib.request.urlopen(url).read()
-        soup = bs4.BeautifulSoup(html)
-        for script in soup(["script", "style"]):
-            script.decompose()
-        strips = list(soup.stripped_strings)
-        mystr = ' '.join(strips)
-        return_str = ''
-        for token in token_list:
-            try:
-                loc = re.search(token, mystr, re.IGNORECASE).start()
-                if loc != -1:
-                    return_str += mystr[loc-70:loc+70] + '...'
-            except:
-                print("An exception occurred") 
-            
-        return return_str
-    except:
-        return ''
-
-def title_getter(url):
-    return documents.find({'url': url})[0]['title']
-
-def title_getter_adhoc(url):
-    try:
-        html = urllib.request.urlopen(url).read()
-        soup = bs4.BeautifulSoup(html)
-        return soup.title.string
-    except:
-        return ''
-"""
 def info_getter(url_list):
     results = {}
     for x in documents.find({'url': {'$in': url_list}}):
@@ -122,9 +89,10 @@ def info_getter(url_list):
 
 def sort(doc_list, query, token_list):
     results = info_getter(doc_list)
+    pageranks = pagerank_getter(doc_list)
     unsorted_dict = {}
     for i in results.keys():
-        unsorted_dict[i] = compute_score(i, query)
+        unsorted_dict[i] = compute_score(i, query, pageranks[i]['pagerank'])
 
     sorted_dict = {k: v for k, v in sorted(unsorted_dict.items(), key=lambda item: item[1], reverse = True)}
     sorted_results = []
