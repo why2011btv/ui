@@ -76,14 +76,17 @@ def find_relevant_doc(query):
 
 def compute_score(docURL, query, pagerank):
     cosine_score = 0.0
+    inTitle_score = 0.0
     for token in query.keys():
         if token in URL_WTD[docURL].keys():
-            cosine_score += lexicon[token]['IDF'] * query[token] * URL_WTD[docURL][token]
+            cosine_score += lexicon[token]['IDF'] * query[token] * URL_WTD[docURL][token][0]
+            inTitle_score += URL_WTD[docURL][token][1]
     # Harmonic Mean
     Total_Score = 2*(cosine_score * pagerank) / (cosine_score + pagerank)
     print("cosine_score", cosine_score)
     print("pagerank", pagerank)
-    return Total_Score
+
+    return Total_Score + inTitle_score
 
 def info_getter(url_list):
     results = {}

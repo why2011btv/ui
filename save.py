@@ -34,9 +34,9 @@ for x in mydoc:
     lexicon[x['lemma']] = {'IDF': x['IDF'], 'docList': pop_(x['docList'])}
     for doc in x['docList']:
         if doc['docURL'] in URL_WTD.keys():
-            URL_WTD[doc['docURL']][x['lemma']] = doc['WTD']
+            URL_WTD[doc['docURL']][x['lemma']] = [doc['WTD'], int(doc['inTitle'])]
         else:
-            URL_WTD[doc['docURL']] = {x['lemma']: doc['WTD']}
+            URL_WTD[doc['docURL']] = {x['lemma']: [doc['WTD'], int(doc['inTitle'])]}
     if num % 10000 == 0:
         print(num)
         print(x['lemma'])
