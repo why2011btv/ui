@@ -69,9 +69,18 @@ def pagerank_getter(url_list):
 
 def find_relevant_doc(query):
     doc_list = []
-    for token in query.keys():
-        for doc in lexicon[token]['docList']:
-            doc_list.append(doc['docURL'])
+    if len(query) == 2:
+        tokens = []
+        for token in query.keys():
+            tokens.append(token)
+        for doc in lexicon[tokens[0]]['docList']:
+            if doc in lexicon[tokens[1]]['docList']:
+                doc_list.append(doc['docURL'])
+    else:
+        for token in query.keys():
+            for doc in lexicon[token]['docList']:
+                doc_list.append(doc['docURL'])
+    
     return doc_list
 
 def compute_score(docURL, query, pagerank):
