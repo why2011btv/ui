@@ -73,9 +73,11 @@ def find_relevant_doc(query):
         tokens = []
         for token in query.keys():
             tokens.append(token)
-        for doc in lexicon[tokens[0]]['docList']:
-            if doc in lexicon[tokens[1]]['docList']:
-                doc_list.append(doc['docURL'])
+        for doc_0 in lexicon[tokens[0]]['docList']:
+            for doc_1 in lexicon[tokens[1]]['docList']:
+                if doc_0['docURL'] == doc_1['docURL']:
+                    doc_list.append(doc_0['docURL'])
+
     else:
         for token in query.keys():
             for doc in lexicon[token]['docList']:
