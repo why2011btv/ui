@@ -55,9 +55,11 @@ class APIError(Exception):
         return "APIError: status={}".format(self.status)
       
 def edl(query):
+    print(query)
     my_list = []
-    q_find = find_entity_name(query.replace("+", "_"))
+    q_find = find_entity_name(query.replace(" ", "_"))
     if q_find != None:
+        print("q_find: ", q_find)
         my_list.append(q_find)
         return_text = return_html('<a href="https://en.wikipedia.org/wiki/' + q_find + '" title="https://en.wikipedia.org/wiki/' + q_find + '" target="_blank">' + q_find + '</a>')
     else:

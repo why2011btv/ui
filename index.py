@@ -19,45 +19,39 @@ myclient = pymongo.MongoClient("mongodb+srv://chris:555Project2021@cluster0.kpha
 mydb = myclient["SearchEngine"]
 mycol = mydb["indexes_final"]
 documents = mydb['documentsFull']
-mydoc = mycol.find({'lemma' : { "$not": {"$regex" : ".* .*"} }})
-lexicon = {}
-URL_WTD = {}
-start_time = time.time()
-with open("lexicon.json") as f_l:
-    lexicon = json.load(f_l)
-with open("URL_WTD.json") as f_W:
-    URL_WTD = json.load(f_W)
 
-print("lexicon size: ", len(lexicon))
-print("random key: ", random.choice(list(lexicon)))
-end_time = time.time()    
-print(end_time - start_time)
-
-"""
-num = 0
-
-for x in mydoc:
-    num += 1
-    lexicon[x['lemma']] = {'IDF': x['IDF'], 'docList': x['docList']}
-    for doc in x['docList']:
-        if doc['docURL'] in URL_WTD.keys():
-            URL_WTD[doc['docURL']][x['lemma']] = doc['WTD']
-        else:
-            URL_WTD[doc['docURL']] = {x['lemma']: doc['WTD']}
-    if num % 1000 == 0:
-        print(num)
-        print(x['lemma'])
-    if num == 50000:
-        break
-
-"""
 stop_words = []
 with open('stop_words_en.txt') as f:
     lines = f.readlines()
     for line in lines:
         stop_words.append(line[0:-1])
 
+def query2dict(query):
+    query_dict = {}
+    tokens = query.split(" ")
+    token_list = []
+
+    for token in tokens:
+        token = token.lower()
+        if token not in stop_words:
+            token_list.append(token)
+        if token not in query_dict.keys():
+            query_dict[token] = 1
+        else:
+            query_dict[token] += 1
+
+    for i in range(len(tokens) - 1):
+        bigram = tokens[i] + ' ' + tokens[i+1]
+        token_list.append(bigram)
+        if bigram not in query_dict.keys():
+            query_dict[bigram] = 1
+        else:
+            query_dict[bigram] += 1
+
+    return query_dict, token_list
+
 def pagerank_getter(url_list):
+    # ad hoc
     results = {}
     for x in documents.find({'url': {'$in': url_list}}):
         try:
@@ -67,56 +61,53 @@ def pagerank_getter(url_list):
             print("pagerank not found for: ", x['url'])
     return results
 
-def find_relevant_doc(query):
-    doc_list = []
-    if len(query) == 2:
-        tokens = []
-        for token in query.keys():
-            tokens.append(token)
-        for doc_0 in lexicon[tokens[0]]['docList']:
-            for doc_1 in lexicon[tokens[1]]['docList']:
-                if doc_0['docURL'] == doc_1['docURL']:
-                    doc_list.append(doc_0['docURL'])
-        print(len(doc_list))
-        if len(doc_list) == 0:
-            for token in query.keys():
-                for doc in lexicon[token]['docList']:
-                    doc_list.append(doc['docURL'])
-
-    else:
-        for token in query.keys():
-            for doc in lexicon[token]['docList']:
-                doc_list.append(doc['docURL'])
-    
-    return doc_list
-
-def compute_score(docURL, query, pagerank):
-    cosine_score = 0.0
-    inTitle_score = 0.0
-    for token in query.keys():
-        if token in URL_WTD[docURL].keys():
-            cosine_score += lexicon[token]['IDF'] * query[token] * URL_WTD[docURL][token][0]
-            inTitle_score += URL_WTD[docURL][token][1]
-    # Harmonic Mean
-    Total_Score = 2*(cosine_score * pagerank) / (cosine_score + pagerank)
-    #print("cosine_score", cosine_score)
-    #print("pagerank", pagerank)
-
-    return Total_Score + inTitle_score
-
 def info_getter(url_list):
     results = {}
     for x in documents.find({'url': {'$in': url_list}}):
         results[x['url']] = {"title": x['title'], "description": x['snippet']}
     return results
 
-def sort(doc_list, query, token_list):
+def find_relevant_doc(query, token_list):
+    doc_list = []
+    lexicon = {}
+    URL_WTD = {}
+    for reverse_index in mycol.find({'lemma': {'$in': token_list}}):
+        lemma = reverse_index['lemma']
+        print(lemma)
+        lexicon[lemma] = {'IDF': reverse_index['IDF']}
+        for doc in reverse_index['docList']:
+            url = doc['docURL']
+            doc_list.append(url)
+            if url in URL_WTD.keys():
+                URL_WTD[url][lemma] = [doc['WTD'], int(doc['inTitle'])]
+            else:
+                URL_WTD[url] = {lemma: [doc['WTD'], int(doc['inTitle'])]}           
+    
+    return doc_list, lexicon, URL_WTD
+
+def sort(doc_list, query, token_list, lexicon, URL_WTD):
+    def compute_score(docURL, query, pagerank):
+        cosine_score = 0.0
+        inTitle_score = 0.0
+        for token in query.keys():
+            if token in URL_WTD[docURL].keys():
+                cosine_score += lexicon[token]['IDF'] * query[token] * URL_WTD[docURL][token][0]
+                inTitle_score += URL_WTD[docURL][token][1]
+        # Harmonic Mean
+        Total_Score = 2*(cosine_score * pagerank) / (cosine_score + pagerank)
+        #print("cosine_score", cosine_score)
+        #print("pagerank", pagerank)
+        return Total_Score + inTitle_score
+
+    print("getting info")
     results = info_getter(doc_list)
+    print("getting pagerank")
     pageranks = pagerank_getter(doc_list)
     unsorted_dict = {}
+    print("start to compute")
     for i in results.keys():
         unsorted_dict[i] = compute_score(i, query, pageranks[i]['pagerank'])
-
+    print("score computation finished")
     sorted_dict = {k: v for k, v in sorted(unsorted_dict.items(), key=lambda item: item[1], reverse = True)}
     sorted_results = []
     
@@ -127,20 +118,6 @@ def sort(doc_list, query, token_list):
         "url": url
         })
     return sorted_results
-
-def query2dict(query):
-    query_dict = {}
-    tokens = query.split(" ")
-    token_list = []
-    for token in tokens:
-        token = token.lower()
-        if token in lexicon.keys() and token not in stop_words:
-            token_list.append(token)
-            if token not in query_dict.keys():
-                query_dict[token] = 1
-            else:
-                query_dict[token] += 1
-    return query_dict, token_list
 
 @app.route("/", methods=['GET'])
 def search():
@@ -166,13 +143,15 @@ def search():
         start_time = time.time()
 
         edl_result, entityList, edl_found_n, dolores_n = edl(query)
-        #print(entityList)
-
+        print("entityList", entityList)
         query_dict, token_list = query2dict(query)
-        #print(query_dict)
-        #print(token_list)
+
         if bool(query_dict):
-            results = sort(find_relevant_doc(query_dict), query_dict, token_list)
+            doc_list, lexicon, URL_WTD = find_relevant_doc(query_dict, token_list)
+            print("found relevant doc")
+            print(len(doc_list))
+            print(time.time() - start_time)
+            results = sort(doc_list, query_dict, token_list, lexicon, URL_WTD)
             data = {
                     "total": len(results),
                     "results": results
