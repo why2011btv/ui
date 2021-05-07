@@ -77,6 +77,11 @@ def find_relevant_doc(query):
             for doc_1 in lexicon[tokens[1]]['docList']:
                 if doc_0['docURL'] == doc_1['docURL']:
                     doc_list.append(doc_0['docURL'])
+        print(len(doc_list))
+        if len(doc_list) == 0:
+            for token in query.keys():
+                for doc in lexicon[token]['docList']:
+                    doc_list.append(doc['docURL'])
 
     else:
         for token in query.keys():
@@ -94,8 +99,8 @@ def compute_score(docURL, query, pagerank):
             inTitle_score += URL_WTD[docURL][token][1]
     # Harmonic Mean
     Total_Score = 2*(cosine_score * pagerank) / (cosine_score + pagerank)
-    print("cosine_score", cosine_score)
-    print("pagerank", pagerank)
+    #print("cosine_score", cosine_score)
+    #print("pagerank", pagerank)
 
     return Total_Score + inTitle_score
 
@@ -116,7 +121,7 @@ def sort(doc_list, query, token_list):
     sorted_results = []
     
     for url in sorted_dict:
-        print(url)
+        #print(url)
         sorted_results.append({"title": results[url]['title'],
         "description": results[url]['description'],
         "url": url
